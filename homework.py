@@ -45,10 +45,12 @@ def send_message(bot, message):
         error_text = f"Ошибка отправки telegram сообщения: {error}"
         logger.error(error_text)
         raise RuntimeError(error_text)
+    else:
+        return message
 
 
 def create_telegram_bot():
-    "Создание телеграм бота."
+    """Создание телеграм бота."""
     try:
         bot = telegram.Bot(token=TELEGRAM_TOKEN)
     except Exception as error:
@@ -139,21 +141,16 @@ def main():
     except Exception as error:
         error_text = f"Ошибка инициализации: {error}"
         raise ValueError(error_text)
-
     current_timestamp = int(time.time())
     last_update = ""
     last_message = ""
-
     while True:
         try:
             message = ""
             response = get_api_answer(current_timestamp)
             homeworks = check_response(response)
-
             if homeworks is False:
-                error_text = "Некоректные данные в ответе от API Яндекса"
-                raise ValueError(error_text)
-
+                raise ValueError("Некоректные данные в ответе от API Яндекса")
             if len(homeworks) > 0:
                 current_update = get_last_update(homeworks[0])
                 if current_update != last_update:
@@ -163,18 +160,14 @@ def main():
                     logger.debug("Отсутствие в ответе новых статусов")
             else:
                 message = "Нет работ для проверки"
-
         except Exception as error:
             message = f"Сбой в работе программы: {error}"
             logger.error(message)
-
         else:
             current_timestamp = int(time.time())
 
         if message != "" and message != last_message:
-            send_message(bot, message)
-            last_message = message
-
+            last_message = send_message(bot, message)
         time.sleep(RETRY_TIME)
 
 
