@@ -1,13 +1,13 @@
+import json
 import logging
 import os
+import time
+from http import HTTPStatus
+
 import requests
 import telegram
-import time
-
 from dotenv import load_dotenv
-from http import HTTPStatus
 from telegram.error import TelegramError
-
 
 load_dotenv()
 
@@ -69,11 +69,24 @@ def get_api_answer(current_timestamp):
     """
     timestamp = current_timestamp
     params = {"from_date": timestamp}
-    homework_statuses = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    try:
+        homework_statuses = requests.get(
+            ENDPOINT, headers=HEADERS, params=params
+        )
+    except Exception as error:
+        error_text = f"Ошибка запроса к API Яндекс: {error}"
+        logger.error(error_text)
+        raise ConnectionError(error_text)
 
     if homework_statuses.status_code == HTTPStatus.OK:
         logger.debug("Получен ответ со статусом 200 ОК")
-        return homework_statuses.json()
+        try:
+            api_answer_json = homework_statuses.json()
+        except json.decoder.JSONDecodeError:
+            error_text = "Ошибка преобразования ответа от API в json"
+            logger.error(error_text)
+            raise ValueError(error_text)
+        return api_answer_json
     else:
         error_text = f"Ошибка http запроса: {homework_statuses.status_code}"
         logger.error(error_text)
@@ -87,11 +100,19 @@ def check_response(response):
     доступный в ответе API по ключу 'homeworks'.
     """
     if not isinstance(response, dict):
-        raise TypeError(
+        error_text = (
             f"Тип ответа от api не dict. Неверный тип: {type(response)}"
         )
-    assert "homeworks" in response, False
-    assert isinstance(response["homeworks"], list)
+        logger.error(error_text)
+        raise TypeError(error_text)
+    if "homeworks" not in response:
+        error_text = "В ответе от API нет объекта homeworks"
+        logger.error(error_text)
+        raise TypeError(error_text)
+    if not isinstance(response["homeworks"], list):
+        error_text = "Объект ответа homeworks не является списком"
+        logger.error(error_text)
+        raise TypeError(error_text)
     return response["homeworks"]
 
 
@@ -101,14 +122,29 @@ def parse_status(homework):
     Возвращает подготовленную для отправки в Telegram строку,
     содержащую один из вердиктов словаря HOMEWORK_STATUSE.
     """
-    homework_name = homework["homework_name"]
-    homework_status = homework["status"]
+    try:
+        homework_name = homework["homework_name"]
+    except KeyError:
+        error_text = "В домашней работе отсутствует объект homework_name"
+        logger.error(error_text)
+        raise KeyError(error_text)
+    try:
+        homework_status = homework["status"]
+    except KeyError:
+        error_text = "В домашней работе отсутствует объект status"
+        logger.error(error_text)
+        raise KeyError(error_text)
 
     if homework_status in HOMEWORK_STATUSES:
         verdict = HOMEWORK_STATUSES[homework_status]
-        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+        info_text = (
+            f'Изменился статус проверки работы "{homework_name}". {verdict}'
+        )
+        logger.debug(info_text)
+        return info_text
     else:
         error_text = f"Неизвестный статус: {homework_status}"
+        logger.error(error_text)
         raise ValueError(error_text)
 
 
@@ -137,7 +173,7 @@ def get_last_update(homeworks):
 def main():
     """Основная логика работы бота."""
     try:
-        if check_tokens() is False:
+        if not check_tokens():
             raise ValueError("Ошибка проверки токенов.")
         bot = create_telegram_bot()
     except Exception as error:
@@ -151,8 +187,6 @@ def main():
             message = ""
             response = get_api_answer(current_timestamp)
             homeworks = check_response(response)
-            if homeworks is False:
-                raise ValueError("Некоректные данные в ответе от API Яндекса")
             current_update = get_last_update(homeworks)
             if len(homeworks) > 0 and current_update != last_update:
                 message = parse_status(homeworks[0])
