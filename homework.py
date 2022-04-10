@@ -47,6 +47,18 @@ def send_message(bot, message):
         raise RuntimeError(error_text)
 
 
+def create_telegram_bot():
+    "Создание телеграм бота."
+    try:
+        bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    except Exception as error:
+        error_text = f"Ошибка создания telegram bot: {error}"
+        logger.error(error_text)
+        raise ValueError(error_text)
+    else:
+        return bot
+
+
 def get_api_answer(current_timestamp):
     """Делает запрос к ENDPOINT API-сервиса.
     В качестве параметра функция получает временную метку.
@@ -99,19 +111,18 @@ def parse_status(homework):
 
 
 def check_tokens():
-    """Проверяет доступность переменных окружения,
-    которые необходимы для работы программы.
+    """Проверяет доступность переменных окружения.
     Если отсутствует хотя бы одна переменная окружения,
     функция должна вернуть False, иначе — True.
     """
-    if (
+    if not (
         len(str(PRACTICUM_TOKEN))
         and len(str(TELEGRAM_TOKEN))
         and TELEGRAM_CHAT_ID
     ):
-        return True
-    else:
+        logger.critical("Ошибка проверки токенов.")
         return False
+    return True
 
 
 def get_last_update(homework):
@@ -121,16 +132,12 @@ def get_last_update(homework):
 
 def main():
     """Основная логика работы бота."""
-    if not check_tokens:
-        error_text = "Ошибка проверки токенов."
-        logger.critical(error_text)
-        raise ValueError(error_text)
-
     try:
-        bot = telegram.Bot(token=TELEGRAM_TOKEN)
+        if check_tokens() is False:
+            raise ValueError("Ошибка проверки токенов.")
+        bot = create_telegram_bot()
     except Exception as error:
-        error_text = f"Ошибка создания telegram bot: {error}"
-        logger.error(error_text)
+        error_text = f"Ошибка инициализации: {error}"
         raise ValueError(error_text)
 
     current_timestamp = int(time.time())
