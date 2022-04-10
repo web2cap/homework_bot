@@ -43,7 +43,7 @@ def send_message(bot, message):
         logger.info(f"Отправленно сообщение: {message}")
     except TelegramError as error:
         error_text = f"Ошибка отправки telegram сообщения: {error}"
-        logger.fatal(error_text)
+        logger.error(error_text)
         raise RuntimeError(error_text)
 
 
@@ -63,7 +63,7 @@ def get_api_answer(current_timestamp):
         return homework_statuses.json()
     else:
         error_text = f"Ошибка http запроса: {homework_statuses.status_code}"
-        logger.fatal(error_text)
+        logger.error(error_text)
         raise ValueError(error_text)
 
 
@@ -128,23 +128,23 @@ def main():
 
     if not check_tokens:
         error_text = "Ошибка проверки токенов."
-        logger.fatal(error_text)
+        logger.critical(error_text)
         raise ValueError(error_text)
 
     try:
         bot = telegram.Bot(token=TELEGRAM_TOKEN)
     except Exception as error:
         error_text = f"Ошибка создания telegram bot: {error}"
-        logger.fatal(error_text)
+        logger.error(error_text)
         raise ValueError(error_text)
 
-    current_timestamp = 0
+    current_timestamp = int(time.time())
     last_update = ""
+    last_message = ""
 
     while True:
         try:
             message = ""
-            # print("Before response")
             response = get_api_answer(current_timestamp)
             homeworks = check_response(response)
 
@@ -157,20 +157,23 @@ def main():
                 if current_update != last_update:
                     message = parse_status(homeworks[0])
                     last_update = current_update
+                else:
+                    logger.debug("Отсутствие в ответе новых статусов")
             else:
-                if last_update != "-1":
-                    message = f"Нет работ для проверки"
-                    last_update = "-1"
-
-            time.sleep(RETRY_TIME)
+                message = f"Нет работ для проверки"
 
         except Exception as error:
             message = f"Сбой в работе программы: {error}"
             logger.error(message)
-            time.sleep(RETRY_TIME)
+
         else:
-            if message is not "":
-                send_message(bot, message)
+            current_timestamp = int(time.time())
+
+        if message is not "" and message != last_message:
+            send_message(bot, message)
+            last_message = message
+
+        time.sleep(RETRY_TIME)
 
 
 if __name__ == "__main__":
