@@ -151,15 +151,13 @@ def main():
             homeworks = check_response(response)
             if homeworks is False:
                 raise ValueError("Некоректные данные в ответе от API Яндекса")
-            if len(homeworks) > 0:
-                current_update = get_last_update(homeworks[0])
-                if current_update != last_update:
-                    message = parse_status(homeworks[0])
-                    last_update = current_update
-                else:
-                    logger.debug("Отсутствие в ответе новых статусов")
+            current_update = get_last_update(homeworks[0])
+            if len(homeworks) > 0 and current_update != last_update:
+                message = parse_status(homeworks[0])
+                last_update = current_update
             else:
                 message = "Нет работ для проверки"
+                logger.debug("Отсутствие в ответе новых статусов")
         except Exception as error:
             message = f"Сбой в работе программы: {error}"
             logger.error(message)
