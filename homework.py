@@ -127,9 +127,11 @@ def check_tokens():
     return True
 
 
-def get_last_update(homework):
+def get_last_update(homeworks):
     """Возвращает дату последнего апдейта."""
-    return homework["date_updated"]
+    if len(homeworks) > 0:
+        return homeworks[0]["date_updated"]
+    return ""
 
 
 def main():
@@ -151,7 +153,7 @@ def main():
             homeworks = check_response(response)
             if homeworks is False:
                 raise ValueError("Некоректные данные в ответе от API Яндекса")
-            current_update = get_last_update(homeworks[0])
+            current_update = get_last_update(homeworks)
             if len(homeworks) > 0 and current_update != last_update:
                 message = parse_status(homeworks[0])
                 last_update = current_update
