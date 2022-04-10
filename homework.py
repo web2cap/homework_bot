@@ -51,9 +51,8 @@ def get_api_answer(current_timestamp):
     """Делает запрос к ENDPOINT API-сервиса.
     В качестве параметра функция получает временную метку.
     В случае успешного запроса должна вернуть ответ API,
-    преобразовав его из формата JSON к типам данных Python
+    преобразовав его из формата JSON к типам данных Python.
     """
-
     timestamp = current_timestamp
     params = {"from_date": timestamp}
     homework_statuses = requests.get(ENDPOINT, headers=HEADERS, params=params)
@@ -88,7 +87,6 @@ def parse_status(homework):
     Возвращает подготовленную для отправки в Telegram строку,
     содержащую один из вердиктов словаря HOMEWORK_STATUSE.
     """
-
     homework_name = homework["homework_name"]
     homework_status = homework["status"]
 
@@ -106,7 +104,6 @@ def check_tokens():
     Если отсутствует хотя бы одна переменная окружения,
     функция должна вернуть False, иначе — True.
     """
-
     if (
         len(str(PRACTICUM_TOKEN))
         and len(str(TELEGRAM_TOKEN))
@@ -119,13 +116,11 @@ def check_tokens():
 
 def get_last_update(homework):
     """Возвращает дату последнего апдейта."""
-
     return homework["date_updated"]
 
 
 def main():
     """Основная логика работы бота."""
-
     if not check_tokens:
         error_text = "Ошибка проверки токенов."
         logger.critical(error_text)
@@ -148,7 +143,7 @@ def main():
             response = get_api_answer(current_timestamp)
             homeworks = check_response(response)
 
-            if homeworks == False:
+            if homeworks is False:
                 error_text = "Некоректные данные в ответе от API Яндекса"
                 raise ValueError(error_text)
 
@@ -160,7 +155,7 @@ def main():
                 else:
                     logger.debug("Отсутствие в ответе новых статусов")
             else:
-                message = f"Нет работ для проверки"
+                message = "Нет работ для проверки"
 
         except Exception as error:
             message = f"Сбой в работе программы: {error}"
@@ -169,7 +164,7 @@ def main():
         else:
             current_timestamp = int(time.time())
 
-        if message is not "" and message != last_message:
+        if message != "" and message != last_message:
             send_message(bot, message)
             last_message = message
 
