@@ -69,11 +69,22 @@ def get_api_answer(current_timestamp):
     """
     timestamp = current_timestamp
     params = {"from_date": timestamp}
+
     try:
         homework_statuses = requests.get(
             ENDPOINT, headers=HEADERS, params=params
         )
-    except Exception as error:
+    except requests.exceptions.Timeout:
+        error_text = "Ошибка запроса к API Яндекс: превышено время ожидания."
+        logger.error(error_text)
+        raise ConnectionError(error_text)
+    except requests.exceptions.TooManyRedirects:
+        error_text = (
+            "Ошибка запроса к API Яндекс: очень много перенаправлений."
+        )
+        logger.error(error_text)
+        raise ConnectionError(error_text)
+    except requests.exceptions.RequestException as error:
         error_text = f"Ошибка запроса к API Яндекс: {error}"
         logger.error(error_text)
         raise ConnectionError(error_text)
