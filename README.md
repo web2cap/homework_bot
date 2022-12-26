@@ -18,9 +18,11 @@ Includes Procfile for Heroku
 
 ### .env example
 
+```
 PRACTICUM_TOKEN = # PRACTICUM REST API Token
 TELEGRAM_TOKEN = # TELEGRAM Messanger Token
 TELEGRAM_CHAT_ID= # Telegram chat ID [int]
+```
 
 ## Installation
 
